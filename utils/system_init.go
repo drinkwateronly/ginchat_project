@@ -1,17 +1,23 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
 var DB *gorm.DB
+var RDB *redis.Client
+var CTX *gin.Context
 
 func InitConfig() {
 	viper.SetConfigName("app")
@@ -25,6 +31,7 @@ func InitConfig() {
 }
 
 func InitMySQL() {
+
 	// 自定义日志模板，打印SQL语句
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
@@ -44,4 +51,34 @@ func InitMySQL() {
 	if err != nil {
 		panic("failed to connect database")
 	}
+}
+
+func InitRedis() {
+	db, _ := strconv.Atoi(viper.GetString("redis.db"))
+	poolSize, _ := strconv.Atoi(viper.GetString("redis.poolSize"))
+	maxIdleConn, _ := strconv.Atoi(viper.GetString("redis.maxIdleConn"))
+
+	RDB = redis.NewClient(&redis.Options{
+		Addr:         viper.GetString("redis.addr"),
+		Password:     viper.GetString("redis.password"),
+		DB:           db,
+		PoolSize:     poolSize,
+		MaxIdleConns: maxIdleConn,
+	})
+}
+
+const (
+	PublishKey = "publish_key"
+)
+
+func Publish(ctx context.Context, channel string, message string) error {
+	var err error
+	err = RDB.Publish(ctx, channel, message).Err()
+	return err
+}
+
+func Subscribe(ctx context.Context, channel string) (string, error) {
+	sub := RDB.Subscribe(ctx, channel)
+	message, err := sub.ReceiveMessage(ctx)
+	return message.Payload, err
 }

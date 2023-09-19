@@ -5,9 +5,12 @@ import (
 	"ginchat/models"
 	"ginchat/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"math/rand"
+	"net/http"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 // GetUserList
@@ -168,4 +171,50 @@ func UpdateUser(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "修改成功",
 	})
+}
+
+// 用于升级HTTP连接到WebSocket连接的实例
+var upGrade = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // 它总是返回 true，表示接受任何来源的连接
+	},
+}
+
+// SendMsg 仅发送一次数据，就断开websocket连接
+func SendMsg(c *gin.Context) {
+	// 升级，返回一个websocket连接
+	ws, err := upGrade.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		// 升级失败
+		fmt.Println(err)
+		return
+	}
+	// websocket连接需要被释放
+	defer func(ws *websocket.Conn) {
+		err = ws.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(ws)
+	// 处理数据向websocket发送
+	MsgHandler(ws, c)
+}
+
+func MsgHandler(ws *websocket.Conn, c *gin.Context) {
+	// 订阅一个名为"123"的redis频道,并从中获取消息
+	message, err := utils.Subscribe(c, "123")
+	if err != nil {
+		fmt.Println(err)
+	}
+	t := time.Now().Format("2006-01-02  15:04:05")
+	m := fmt.Sprintf("[ginchat][%s]:[%s]", t, message)
+	// 向websocket发送处理好的数据
+	err = ws.WriteMessage(1, []byte(m))
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func SendUserMsg(c *gin.Context) {
+	models.Chat(c.Writer, c.Request)
 }
