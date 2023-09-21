@@ -15,15 +15,15 @@ var rwLocker sync.RWMutex
 
 type MessageBasic struct {
 	gorm.Model
-	FromId  string // 发送者
-	ToId    string // 接收者
-	Type    string // 消息类型
-	Media   int    //
-	Content string //
-	Pic     string //
-	Url     string //
-	Desc    string //
-	Amount  int    //
+	FromIdentity string // 发送者
+	ToIdentity   string // 接收者
+	Type         string // 消息类型
+	Media        int    //
+	Content      string //
+	Pic          string //
+	Url          string //
+	Desc         string //
+	Amount       int    //
 }
 
 func (msg *MessageBasic) TableName() string {
@@ -180,7 +180,7 @@ func dispatch(data []byte) {
 	}
 	switch msg.Type {
 	case "1": // 私聊
-		sendDirectMessage(msg.ToId, data)
+		sendDirectMessage(msg.ToIdentity, data)
 		//case 2:
 		//	sendGroupMsg()
 

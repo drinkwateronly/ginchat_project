@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"ginchat/models"
 	"ginchat/utils"
@@ -51,6 +52,7 @@ func UserRegister(c *gin.Context) {
 	rePassword := c.PostForm("rePassword")
 	if password != rePassword {
 		c.JSON(-1, gin.H{
+			"code":    -1,
 			"message": "两次密码不一致",
 		})
 		return
@@ -58,6 +60,7 @@ func UserRegister(c *gin.Context) {
 	isMatch, _ = regexp.MatchString("^.{6,20}$", password)
 	if isMatch == false {
 		c.JSON(400, gin.H{
+			"code":    -1,
 			"message": "密码格式不符",
 		})
 		return
@@ -67,6 +70,7 @@ func UserRegister(c *gin.Context) {
 	_, isExist := models.FindUserByAccount(account)
 	if isExist {
 		c.JSON(400, gin.H{
+			"code":    -1,
 			"message": "账号已存在",
 		})
 		return
@@ -75,13 +79,26 @@ func UserRegister(c *gin.Context) {
 	user.Account = account
 	user.Name = c.PostForm("name")
 	user.Email = c.PostForm("email")
+	marshal, err := json.Marshal(user)
+	if err != nil {
+		return
+	}
+	user.Identity = utils.Md5Encode(string(marshal))
 	// Go 的 math/rand 包默认使用的伪随机数生成器是线性同余生成器（Linear Congruential Generator，LCG），它的随机性可能不足够强大
 	salt := fmt.Sprintf("%06d", rand.Int31()) // todo 更换其他
 	user.Salt = salt
 	user.Password = utils.MakePassword(password, salt) // 密码不要明文存储
 
-	models.CreateUser(user) // TODO: 错误处理
+	ret := models.CreateUser(user) // TODO: 错误处理
+	if ret.Error != nil {
+		fmt.Println(ret.Error)
+		c.JSON(200, gin.H{
+			"code":    -1,
+			"message": "注册失败",
+		})
+	}
 	c.JSON(200, gin.H{
+		"code":    0,
 		"message": "注册成功",
 	})
 }
@@ -96,16 +113,26 @@ func UserRegister(c *gin.Context) {
 func UserLogin(c *gin.Context) {
 	account := c.PostForm("account")
 	password := c.PostForm("password")
+	if account == "" || password == "" {
+		c.JSON(200, gin.H{
+			"code":    -1,
+			"message": "用户名或密码不能为空",
+		})
+	}
 	userBasic, isExist := models.FindUserByAccount(account)
+	fmt.Println(account, password, isExist)
 	if !isExist {
 		c.JSON(400, gin.H{
-			"message": "用户不存在",
+			"code":    -1,
+			"message": "用户不存在", // 实际上是用户不存在
 		})
+		return
 	}
 	isPass := utils.ValidatePassword(password, userBasic.Salt, userBasic.Password)
 	if !isPass {
 		c.JSON(400, gin.H{
-			"message": "密码错误", // 应该不提示什么不正确
+			"code":    -1,
+			"message": "用户名或密码错误", // 实际上是密码错误，但不应该提示是什么不正确
 		})
 		return
 	}
@@ -120,6 +147,7 @@ func UserLogin(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code":    0,
 		"message": "登录成功",
+		"data":    userBasic,
 		"token":   jwtoken,
 	})
 }
@@ -217,4 +245,14 @@ func MsgHandler(ws *websocket.Conn, c *gin.Context) {
 
 func SendUserMsg(c *gin.Context) {
 	models.Chat(c.Writer, c.Request)
+}
+
+func SearchFriends(c *gin.Context) {
+
+	friendsInfoList := models.SearchFriends(c.Query("account"))
+	c.JSON(200, gin.H{
+		"code":    0,
+		"data":    friendsInfoList,
+		"message": "查找成功",
+	})
 }

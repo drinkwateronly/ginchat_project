@@ -22,10 +22,16 @@ func Router() *gin.Engine {
 	r.StaticFile("/favicon.ico", "asset/images/favicon.ico")
 	//	r.StaticFS()
 	r.LoadHTMLGlob("views/**/*")
-	// 首页
+	// 页面跳转
 	r.GET("/", service.GetIndex)
 	r.GET("/index", service.GetIndex)
+	r.GET("/register", service.ToRegister)
+	r.GET("/toChat", service.ToChat)
 
+	//
+	r.GET("/searchFriends", service.SearchFriends)
+
+	// 服务
 	r.GET("/user/getUserList", service.GetUserList)
 	r.POST("/user/register", service.UserRegister)
 	r.GET("/user/deleteUser", service.DeleteUser)
@@ -33,6 +39,6 @@ func Router() *gin.Engine {
 	r.POST("/user/userLogin", service.UserLogin)
 
 	r.GET("/user/sendMsg", service.SendMsg)
-	r.GET("user/sendUserMsg", service.SendUserMsg)
+	r.GET("/user/sendUserMsg", service.SendUserMsg)
 	return r
 }
