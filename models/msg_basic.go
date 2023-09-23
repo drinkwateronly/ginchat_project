@@ -15,15 +15,15 @@ var rwLocker sync.RWMutex
 
 type MessageBasic struct {
 	gorm.Model
-	FromIdentity string // 发送者
-	ToIdentity   string // 接收者
-	Type         string // 消息类型
-	Media        int    //
-	Content      string //
-	Pic          string //
-	Url          string //
-	Desc         string //
-	Amount       int    //
+	TargetId string // 目标
+	UserId   string // 谁发送的
+	Type     int    // 消息类型
+	Media    int    // 消息的内容类型，1、文本 4、表情
+	Content  string // 内容
+	Pic      string //
+	Url      string // 表情URL
+	Desc     string //
+	Amount   int    //
 }
 
 func (msg *MessageBasic) TableName() string {
@@ -47,11 +47,8 @@ func Chat(writer http.ResponseWriter, request *http.Request) {
 	// token := query.Get("token")
 	isValidated := true
 	query := request.URL.Query()
-	userId := query.Get("user_id")
-	//msgType := query.Get("msg_type")
-	//targetId := query.Get("target_id")
-	//content := query.Get("content")
-	// 升级连接为websocket
+	userId := query.Get("userId")
+	// 升级http连接升级为websocket
 	conn, err := (&websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return isValidated
@@ -61,12 +58,14 @@ func Chat(writer http.ResponseWriter, request *http.Request) {
 		fmt.Println(err)
 		return
 	}
+	// 创建聊天节点
 	node := &Node{
 		Conn:      conn,
 		DataQueue: make(chan []byte, 50),
 		GroupSets: set.New(set.ThreadSafe), // 保证线程
 	}
 	rwLocker.Lock()
+	// 放入map中
 	clientMap[userId] = node
 	rwLocker.Unlock()
 	go sendProc(node) // 将消息发送到由node表示的WebSocket连接。
@@ -78,7 +77,9 @@ func sendProc(node *Node) {
 	for {
 		select {
 		case data := <-node.DataQueue:
+			fmt.Println("send >>>>>>>>", string(data))
 			err := node.Conn.WriteMessage(websocket.TextMessage, data)
+
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -95,7 +96,7 @@ func recvProc(node *Node) {
 			return
 		}
 		broadMsg(message)
-		fmt.Println(message)
+		fmt.Println("recv >>>>>>>>", string(message))
 	}
 }
 
@@ -115,7 +116,9 @@ func udpSendProc() {
 		"udp",
 		nil,
 		&net.UDPAddr{
-			IP:   net.IPv4(172, 31, 226, 255),
+			//IP:   net.IPv4(172, 31, 226, 255),
+			IP: net.IPv4(172, 30, 98, 255),
+
 			Port: 3000,
 		},
 	)
@@ -171,23 +174,28 @@ func udpRecvProc() {
 	}
 }
 
+// 将收到的数据解包json化
 func dispatch(data []byte) {
 	msg := MessageBasic{}
-	err := json.Unmarshal(data, &msg)
+	err := json.Unmarshal(data, &msg) // 解析成MessageBasic，前端根据Media字段认消息的类型，如文本、表情等
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	// 根据数据的聊天类型，决定向谁发送
 	switch msg.Type {
-	case "1": // 私聊
-		sendDirectMessage(msg.ToIdentity, data)
+	case 1: // 私聊
+		sendDirectMessage(msg.TargetId, data)
 		//case 2:
 		//	sendGroupMsg()
 
 	}
 }
 
+// 点对点私聊
 func sendDirectMessage(targetId string, msg []byte) {
+	fmt.Println(string(msg))
+	// map的锁
 	rwLocker.RLock()
 	node, ok := clientMap[targetId]
 	rwLocker.RUnlock()

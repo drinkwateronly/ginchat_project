@@ -9,7 +9,7 @@ import (
 
 type UserBasic struct {
 	gorm.Model
-	Account       string `valid:"matches(^[a-zA-Z0-9]{6,}$)"` // 账号，数字或字母，6~20位
+	UserId        string `valid:"matches(^[a-zA-Z0-9]{6,}$)"` // 账号，数字或字母，6~20位
 	Name          string
 	Password      string `valid:"matches(^.{6,20}$)"` // 任意字符6~20位
 	Salt          string
@@ -56,9 +56,9 @@ func UpdateUser(user UserBasic) *gorm.DB {
 		})
 }
 
-func FindUserByAccount(account string) (*UserBasic, bool) {
+func FindUserByUserId(userId string) (*UserBasic, bool) {
 	user := UserBasic{}
-	rowsAffected := utils.DB.Where("account = ?", account).First(&user).RowsAffected
+	rowsAffected := utils.DB.Where("user_id = ?", userId).First(&user).RowsAffected
 	if rowsAffected == 0 {
 		return nil, false
 	}

@@ -14,7 +14,7 @@
 <div class="mui-content login-page" id="pageapp">
     <form id='login-form' class="mui-input-group login-from">
         <div class="mui-input-row">
-            <input v-model="user.account" placeholder="请输入用户名" type="text" class="mui-input-clear mui-input" >
+            <input v-model="user.userId" placeholder="请输入用户名" type="text" class="mui-input-clear mui-input" >
         </div>
         <div class="mui-input-row">
             <input v-model="user.password" placeholder="请输入密码"  type="password" class="mui-input-clear mui-input" >
@@ -36,7 +36,7 @@
         data:function(){
           return {
               user:{
-                account:"",
+                  userId:"",
                 password:"",
               }
           }
@@ -55,11 +55,11 @@
                         mui.toast(res.message)
                     }else{
                         console.log(res.data.Identity)
-                        var url = "/toChat?account="+res.data.Account+"&token="+res.data.Identity
+                        var url = "/toChat?userId="+res.data.UserId+"&token="+res.data.Identity
                         userInfo(res.data)
-                        userId(res.data.Account)
+                        userId(res.data.UserId)
                         mui.toast("登录成功,即将跳转")
-                        // location.href = url
+                        location.href = url
                     }
                 })
             },

@@ -30,8 +30,9 @@
 
 
     function userId() {
-        return parseInt(util.parseQuery("userId"))
+        return util.parseQuery("userId")
     }
+
     var app = new Vue(
         {
             el: "#pageapp",
@@ -266,10 +267,11 @@
                     mui.alert("请加微信号msb-shenzhuan索取")
                 },
                 showmsg: function (user, msg, isReverse, isFirst) {
-                    //console.log(">>>>>>>>>>>", user)
-                    // console.log(">>>>>>>>>>>", msg)
+                    console.log(">>>>>>>>>>>", user)
+                    console.log(">>>>>>>>>>>", msg)
                     var data = {
                     }
+                    // console.log(msg)
                     data.ismine = userId() == msg.userId;
                     //console.log(data.ismine,userId(),msg.userid)
                     data.user = user;
@@ -312,12 +314,13 @@
                 sendtxtmsg: function (txt) {
                     if (this.isDisable) {
                         this.setTimeFlag()
+                        console.log("单聊")
                         //{id:1,userid:2,dstid:3,cmd:10,media:1,content:"hello"}
                         var msg = this.createmsgcontext();
                         msg.Media = 1;
                         msg.Content = txt;
                         if (msg.Type == 1) {
-                            this.showmsg(userInfo(), msg);
+                            this.showmsg(userId(), msg); // 被我修改 原本是userInfo()
                         }
 
                         this.webSocket.send(JSON.stringify(msg))
@@ -373,11 +376,10 @@
                         }
 
                         this.setTimeFlag()
-                        //console.log(user)
                         this.win = "single";
                         this.title = "和" + user.Name + "聊天中";
                         this.otherAvatar = user.Avatar;
-                        this.msgcontext.TargetId = parseInt(user.ID);
+                        this.msgcontext.TargetId = user.UserId;
                         this.msgcontext.Type = 1;
                         mui('.mui-scroll-wrapper').scroll({
                             scrollY: true, //是否竖向滚动
@@ -423,20 +425,22 @@
                 },
                 loaduserinfo: function (userid, cb) {
                     userid = "" + userid;
-                    console.log(">>>> " + userid)
-                    var userinfo = this.usermap[userid];
-                    if (!userinfo) {
-                        post("user/find", { userId: parseInt(userid) }, function (res) {
-                            cb(res.Data);
-                            this.usermap[userid] = res.Data;
-                        }.bind(this))
-                    } else {
-                        cb(userinfo)
-                    }
+                    cb(userid)
+                    // console.log(">>>> " + userid)
+                    // var userinfo = this.usermap[userid];
+                    // if (!userinfo) {
+                    //     post("user/search", { userId: userid }, function (res) {
+                    //         console.log("user/search>>>", res)
+                    //         cb(res.Data);
+                    //         this.usermap[userid] = res.Data;
+                    //     }.bind(this))
+                    // } else {
+                    //     cb(userinfo)
+                    // }
                 },
                 onmessage: function (data) {
                     this.loaduserinfo(data.userId, function (user) {
-
+                        console.log(">>>>>onmessage:")
                         this.showmsg(user, data)
                         this.friends.map((item) => {
                             if (item.ID == data.userId) {
@@ -457,13 +461,13 @@
 
                 },
                 initwebsocket: function () {
-                    var url = "ws://" + location.host + "/user/sendUserMsg?userId=" + userId() + "&token=" + util.parseQuery("token");
+                    var url = "ws://" + location.host + "/user/chat?userId=" + userId() + "&token=" + util.parseQuery("token");
+                    console.log(url)
                     this.webSocket = new WebSocket(url);
                     //消息处理
                     this.webSocket.onmessage = function (evt) {
-                        console.log("onmessage", evt.data)
                         if (evt.data.indexOf("}") > -1) {
-                            console.log("recv json <==" + evt.data)
+                            console.log("收到了对方的数据 <==" + evt.data)
                             this.onmessage(JSON.parse(evt.data));
                         } else {
                             console.log("recv<==" + evt.data)
@@ -486,11 +490,14 @@
                 },
                 loadfriends: function () {
                     var that = this;
+                    console.log(userId())
                     post("searchFriends", { userId: userId() }, function (res) {
+                        console.log(res)
                         that.friends = res.Rows || [];
                         var usermap = this.usermap;
                         for (var i in res.Rows) {
-                            var k = "" + res.Rows[i].ID
+                            console.log(res.Rows[i])
+                            var k = "" + res.Rows[i].userId
                             usermap[k] = res.Rows[i];
                         }
                         this.usermap = usermap;
@@ -643,12 +650,9 @@
                         msg.Type = 3
                         msg.Content = "心跳";
                         //this.showmsg(userInfo(),msg);
-                        this.webSocket.send(JSON.stringify(msg))
+                        // this.webSocket.send(JSON.stringify(msg))
                     }
-
                 }
-
-
             },
             watch: {
                 "win": function (n, o) {

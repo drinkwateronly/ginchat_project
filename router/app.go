@@ -29,7 +29,7 @@ func Router() *gin.Engine {
 	r.GET("/toChat", service.ToChat)
 
 	//
-	r.GET("/searchFriends", service.SearchFriends)
+	r.POST("/searchFriends", service.SearchFriends)
 
 	// 服务
 	r.GET("/user/getUserList", service.GetUserList)
@@ -39,6 +39,12 @@ func Router() *gin.Engine {
 	r.POST("/user/userLogin", service.UserLogin)
 
 	r.GET("/user/sendMsg", service.SendMsg)
-	r.GET("/user/sendUserMsg", service.SendUserMsg)
+	// 创建私聊的websocket
+	r.GET("/user/chat", service.Chat)
+	r.POST("/user/search", service.UserSearch)
+
+	//
+	r.POST("/attach/upload", service.UpLoad)
+
 	return r
 }

@@ -29,12 +29,12 @@ func Resp(w http.ResponseWriter, code int, data interface{}, msg string) {
 	w.Write(ret)
 }
 
-func RespList(w http.ResponseWriter, code int, data interface{}, total interface{}) {
+func RespList(w http.ResponseWriter, code int, rows interface{}, total interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	h := H{
 		Code:  code,
-		Data:  data,
+		Rows:  rows,
 		Total: total,
 	}
 	ret, err := json.Marshal(h)
@@ -52,6 +52,6 @@ func RespOK(w http.ResponseWriter, data interface{}, msg string) {
 	Resp(w, 0, data, msg)
 }
 
-func RespOKList(w http.ResponseWriter, data interface{}, msg string) {
-	RespList(w, 0, data, msg)
+func RespOKList(w http.ResponseWriter, rows interface{}, total interface{}) {
+	RespList(w, 0, rows, total)
 }

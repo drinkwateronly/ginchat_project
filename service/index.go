@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"ginchat/models"
 	"github.com/gin-gonic/gin"
 	"text/template"
@@ -50,15 +49,9 @@ func ToChat(c *gin.Context) {
 	}
 	//c.Query("account")
 	//c.Query("token")
-	fmt.Println(c.Query("account"))
-	fmt.Println(c.Query("token"))
 	ub := models.UserBasic{
-		Account:  c.Query("account"),
+		UserId:   c.Query("userId"),
 		Identity: c.Query("token"),
 	}
-
 	ind.Execute(c.Writer, ub)
-	// c.JSON(200, gin.H{
-	// 	"message": "welcome !!  ",
-	// })
 }

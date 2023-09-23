@@ -29,7 +29,7 @@ func GetUserList(c *gin.Context) {
 // UserRegister
 // @Summary 用户注册
 // @Tags 用户模块
-// @param account formData string false "账号"
+// @param userId formData string false "账号"
 // @param name formData string false "用户名"
 // @param password formData string false "密码"
 // @param rePassword formData string false "确认密码"
@@ -40,8 +40,8 @@ func UserRegister(c *gin.Context) {
 	// todo: 校验邮箱验证码，
 	user := models.UserBasic{}
 	// 校验账号密码格式
-	account := c.PostForm("account")
-	isMatch, _ := regexp.MatchString("^[a-zA-Z0-9]{6,}$", account)
+	userId := c.PostForm("userId")
+	isMatch, _ := regexp.MatchString("^[a-zA-Z0-9]{6,}$", userId)
 	if isMatch == false {
 		c.JSON(400, gin.H{
 			"message": "账号格式不符",
@@ -67,7 +67,7 @@ func UserRegister(c *gin.Context) {
 	}
 
 	// 检查账号是否存在
-	_, isExist := models.FindUserByAccount(account)
+	_, isExist := models.FindUserByUserId(userId)
 	if isExist {
 		c.JSON(400, gin.H{
 			"code":    -1,
@@ -76,7 +76,7 @@ func UserRegister(c *gin.Context) {
 		return
 	}
 	// 通过校验，开始新建账号
-	user.Account = account
+	user.UserId = userId
 	user.Name = c.PostForm("name")
 	user.Email = c.PostForm("email")
 	marshal, err := json.Marshal(user)
@@ -106,21 +106,21 @@ func UserRegister(c *gin.Context) {
 // UserLogin
 // @Summary 用户登录
 // @Tags 用户模块
-// @param account formData string id "账号"
+// @param userId formData string id "账号"
 // @param password formData string id "密码"
 // @Success 200 {string} json{"code",message"}
 // @Router /user/userLogin [post]
 func UserLogin(c *gin.Context) {
-	account := c.PostForm("account")
+	userId := c.PostForm("userId")
 	password := c.PostForm("password")
-	if account == "" || password == "" {
+	if userId == "" || password == "" {
 		c.JSON(200, gin.H{
 			"code":    -1,
 			"message": "用户名或密码不能为空",
 		})
 	}
-	userBasic, isExist := models.FindUserByAccount(account)
-	fmt.Println(account, password, isExist)
+	userBasic, isExist := models.FindUserByUserId(userId)
+	fmt.Println(userId, password, isExist)
 	if !isExist {
 		c.JSON(400, gin.H{
 			"code":    -1,
@@ -136,7 +136,7 @@ func UserLogin(c *gin.Context) {
 		})
 		return
 	}
-	jwtoken, err := utils.GenerateJWT(userBasic.Account, userBasic.Name)
+	jwtoken, err := utils.GenerateJWT(userBasic.UserId, userBasic.Name)
 	if err != nil {
 		c.JSON(400, gin.H{
 			"code":    -1,
@@ -243,16 +243,20 @@ func MsgHandler(ws *websocket.Conn, c *gin.Context) {
 	}
 }
 
-func SendUserMsg(c *gin.Context) {
+func Chat(c *gin.Context) {
 	models.Chat(c.Writer, c.Request)
 }
 
 func SearchFriends(c *gin.Context) {
+	// 查找用户列表
+	friendsInfoList := models.SearchFriends(c.PostForm("userId"))
+	utils.RespOKList(c.Writer, friendsInfoList, len(friendsInfoList))
+}
 
-	friendsInfoList := models.SearchFriends(c.Query("account"))
-	c.JSON(200, gin.H{
-		"code":    0,
-		"data":    friendsInfoList,
-		"message": "查找成功",
-	})
+func UserSearch(c *gin.Context) {
+	ub, isExist := models.FindUserByUserId(c.PostForm("userId"))
+	if isExist {
+		utils.RespFail(c.Writer, "用户不存在")
+	}
+	utils.RespOK(c.Writer, ub, "")
 }
