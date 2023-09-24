@@ -3,7 +3,8 @@ package utils
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"strings"
+	"math/rand"
+	"strconv"
 )
 
 func Md5Encode(data string) string {
@@ -13,8 +14,25 @@ func Md5Encode(data string) string {
 	return hex.EncodeToString(tmpStr)
 }
 
-func MD5Encode(data string) string {
-	return strings.ToUpper(Md5Encode(data))
+//func MD5Encode(data string) string {
+//	return strings.ToUpper(Md5Encode(data))
+//}
+
+func Md5EncodeByte(data []byte) string {
+	h := md5.New()
+	h.Write(data)
+	tmpStr := h.Sum([]byte(nil))
+	return hex.EncodeToString(tmpStr)
+}
+
+func MakeGroupId() string {
+	groupId := ""
+	groupIdLength := rand.Intn(3) + 7
+	for i := 0; i < groupIdLength; i++ {
+		tmpNum := strconv.Itoa(rand.Intn(9))
+		groupId += tmpNum
+	}
+	return groupId
 }
 
 func MakePassword(rawPassword, salt string) string {

@@ -260,3 +260,47 @@ func UserSearch(c *gin.Context) {
 	}
 	utils.RespOK(c.Writer, ub, "")
 }
+
+func AddFriend(c *gin.Context) {
+	userId := c.PostForm("userId")
+	targetId := c.PostForm("targetId")
+	fmt.Println(c.PostForm("targetId"), c.PostForm("userId"))
+	if userId == targetId {
+		utils.RespFail(c.Writer, "不能添加自己")
+		return
+	}
+	msg, code := models.AddFriend(userId, targetId)
+	if code == -1 {
+		utils.RespFail(c.Writer, msg)
+	} else {
+		utils.RespOK(c.Writer, nil, msg)
+	}
+	return
+}
+
+func CreateGroup(c *gin.Context) {
+	gb := models.GroupBasic{
+		GroupIdentity: "",
+		GroupName:     c.PostForm("groupName"),
+		OwnerIdentity: c.PostForm("ownerId"),
+		Icon:          c.PostForm("icon"),
+		Type:          0,
+		Desc:          c.PostForm("desc"),
+	}
+
+	if code, msg := models.CreateGroup(gb); code == -1 {
+		utils.RespFail(c.Writer, msg)
+	} else {
+		utils.RespOK(c.Writer, nil, msg)
+	}
+}
+
+func LoadGroups(c *gin.Context) {
+	userId := c.PostForm("userId")
+	fmt.Println(userId)
+	if umbList, code := models.LoadGroups(userId); code == -1 {
+		utils.RespFail(c.Writer, "加载群聊失败")
+	} else {
+		utils.RespOK(c.Writer, umbList, "加载群聊成功")
+	}
+}

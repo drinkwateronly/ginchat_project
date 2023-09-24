@@ -44,7 +44,12 @@ func Router() *gin.Engine {
 	r.POST("/user/search", service.UserSearch)
 
 	//
+
+	r.POST("/contact/addFriend", service.AddFriend)
 	r.POST("/attach/upload", service.UpLoad)
 
+	// 群聊
+	r.POST("/group/create", service.CreateGroup)
+	r.POST("/group/load", service.LoadGroups)
 	return r
 }
