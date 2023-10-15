@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/websocket"
 	"gopkg.in/fatih/set.v0"
 	"gorm.io/gorm"
-	"net"
 	"net/http"
 	"sync"
 )
@@ -15,15 +14,16 @@ var rwLocker sync.RWMutex
 
 type MessageBasic struct {
 	gorm.Model
-	TargetId string // 目标
-	UserId   string // 谁发送的
-	Type     int    // 消息类型
-	Media    int    // 消息的内容类型，1、文本 4、表情
-	Content  string // 内容
-	Pic      string //
-	Url      string // 表情URL
-	Desc     string //
-	Amount   int    //
+	TargetId   string // 目标
+	UserId     string // 谁发送的
+	CreateTime int64  // 发送时间
+	Type       int    // 消息类型
+	Media      int    // 消息的内容类型，1、文本 4、表情
+	Content    string // 内容
+	Pic        string //
+	Url        string // 表情URL
+	Desc       string //
+	Amount     int    //
 }
 
 func (msg *MessageBasic) TableName() string {
@@ -79,7 +79,6 @@ func sendProc(node *Node) {
 		case data := <-node.DataQueue:
 			fmt.Println("send >>>>>>>>", string(data))
 			err := node.Conn.WriteMessage(websocket.TextMessage, data)
-
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -95,8 +94,10 @@ func recvProc(node *Node) {
 			fmt.Println(err)
 			return
 		}
-		broadMsg(message)
-		fmt.Println("recv >>>>>>>>", string(message))
+		//broadMsg(message)
+		fmt.Println("<<<<<<<<recv", string(message))
+		dispatch(message)
+
 	}
 }
 
@@ -106,73 +107,73 @@ func broadMsg(message []byte) {
 	udpSendChan <- message
 }
 
-func init() {
-	go udpSendProc() // 分别将udp
-	go udpRecvProc()
-}
-
-func udpSendProc() {
-	con, err := net.DialUDP(
-		"udp",
-		nil,
-		&net.UDPAddr{
-			//IP:   net.IPv4(172, 31, 226, 255),
-			IP: net.IPv4(172, 30, 98, 255),
-
-			Port: 3000,
-		},
-	)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer func(con *net.UDPConn) {
-		err := con.Close()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}(con)
-	for {
-		select {
-		// udpSendChan有消息则取出,并向websocket发送
-		case data := <-udpSendChan:
-			_, err := con.Write(data)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-		}
-	}
-}
-
-func udpRecvProc() {
-	con, err := net.ListenUDP("udp",
-		&net.UDPAddr{
-			IP:   net.IPv4zero,
-			Port: 3000,
-		})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer func(con *net.UDPConn) {
-		err := con.Close()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}(con)
-	for {
-		var buf [512]byte
-		n, err := con.Read(buf[0:])
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		dispatch(buf[0:n])
-	}
-}
+//func init() {
+//	go udpSendProc() // 分别将udp
+//	go udpRecvProc()
+//}
+//
+//func udpSendProc() {
+//	con, err := net.DialUDP(
+//		"udp",
+//		nil,
+//		&net.UDPAddr{
+//			//IP:   net.IPv4(172, 31, 226, 255),
+//			IP: net.IPv4(172, 30, 98, 255),
+//
+//			Port: 3000,
+//		},
+//	)
+//	if err != nil {
+//		fmt.Println(err)
+//		return
+//	}
+//	defer func(con *net.UDPConn) {
+//		err := con.Close()
+//		if err != nil {
+//			fmt.Println(err)
+//			return
+//		}
+//	}(con)
+//	for {
+//		select {
+//		// udpSendChan有消息则取出,并向websocket发送
+//		case data := <-udpSendChan:
+//			_, err := con.Write(data)
+//			if err != nil {
+//				fmt.Println(err)
+//				return
+//			}
+//		}
+//	}
+//}
+//
+//func udpRecvProc() {
+//	con, err := net.ListenUDP("udp",
+//		&net.UDPAddr{
+//			IP:   net.IPv4zero,
+//			Port: 3000,
+//		})
+//	if err != nil {
+//		fmt.Println(err)
+//		return
+//	}
+//	defer func(con *net.UDPConn) {
+//		err := con.Close()
+//		if err != nil {
+//			fmt.Println(err)
+//			return
+//		}
+//	}(con)
+//	for {
+//		var buf [512]byte
+//		n, err := con.Read(buf[0:])
+//		if err != nil {
+//			fmt.Println(err)
+//			return
+//		}
+//		dispatch(buf[0:n])
+//	}
+//}
 
 // 将收到的数据解包json化
 func dispatch(data []byte) {
@@ -185,21 +186,40 @@ func dispatch(data []byte) {
 	// 根据数据的聊天类型，决定向谁发送
 	switch msg.Type {
 	case 1: // 私聊
-		sendDirectMessage(msg.TargetId, data)
-		//case 2:
-		//	sendGroupMsg()
-
+		targetUserId := msg.TargetId
+		sendDirectMessage(targetUserId, data)
+	case 2:
+		targetGroupId := msg.TargetId
+		fromId := msg.UserId
+		sendGroupMsg(fromId, targetGroupId, data)
 	}
 }
 
 // 点对点私聊
 func sendDirectMessage(targetId string, msg []byte) {
-	fmt.Println(string(msg))
-	// map的锁
 	rwLocker.RLock()
 	node, ok := clientMap[targetId]
 	rwLocker.RUnlock()
 	if ok {
 		node.DataQueue <- msg
+	}
+}
+
+func sendGroupMsg(fromId, targetId string, msg []byte) {
+	// 查找群内用户
+	umbList := FindMembersByGroupId(targetId)
+	// 向这些群内用户发送数据
+	//fmt.Println(string(msg))
+	//fmt.Println(len(ubList))
+	for _, umb := range umbList {
+		if fromId == umb.MemberIdentity {
+			continue
+		}
+		rwLocker.RLock()
+		node, ok := clientMap[umb.MemberIdentity]
+		rwLocker.RUnlock()
+		if ok {
+			node.DataQueue <- msg
+		}
 	}
 }

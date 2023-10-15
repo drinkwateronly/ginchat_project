@@ -31,7 +31,7 @@ func Router() *gin.Engine {
 	//
 	r.POST("/searchFriends", service.SearchFriends)
 
-	// 服务
+	// 用户信息
 	r.GET("/user/getUserList", service.GetUserList)
 	r.POST("/user/register", service.UserRegister)
 	r.GET("/user/deleteUser", service.DeleteUser)
@@ -49,7 +49,8 @@ func Router() *gin.Engine {
 	r.POST("/attach/upload", service.UpLoad)
 
 	// 群聊
-	r.POST("/group/create", service.CreateGroup)
-	r.POST("/group/load", service.LoadGroups)
+	r.POST("/group/create", service.CreateGroup) // 创建群聊
+	r.POST("/group/load", service.LoadGroups)    // 加载群聊列表
+	r.POST("/group/join", service.JoinGroup)     // 加入群聊
 	return r
 }

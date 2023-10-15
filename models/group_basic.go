@@ -59,3 +59,21 @@ func CreateGroup(gb GroupBasic) (int, string) {
 	tx.Commit()
 	return 0, "建群成功"
 }
+
+// IsGroupExist 群聊是否存在
+func IsGroupExist(groupIdentity string) bool {
+	count := utils.DB.Where("group_identity = ?", groupIdentity).Find(&GroupBasic{}).RowsAffected
+	if count == 0 {
+		return false
+	}
+	return true
+}
+
+// IsGroupJoined 用户是否已加入某群聊，并不判断群聊是否存在：如果群聊不存在，用户自然不在该群聊
+func IsGroupJoined(groupIdentity string, memberIdentity string) bool {
+	count := utils.DB.Where("group_identity = ? AND member_identity = ?", groupIdentity, memberIdentity).Find(&GroupMemberBasic{}).RowsAffected
+	if count == 0 {
+		return false
+	}
+	return true
+}

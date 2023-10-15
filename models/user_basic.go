@@ -58,7 +58,7 @@ func UpdateUser(user UserBasic) *gorm.DB {
 
 func FindUserByUserId(userId string) (*UserBasic, bool) {
 	user := UserBasic{}
-	rowsAffected := utils.DB.Where("user_id = ?", userId).First(&user).RowsAffected
+	rowsAffected := utils.DB.Where("user_id = ?", userId).Find(&user).RowsAffected
 	if rowsAffected == 0 {
 		return nil, false
 	}

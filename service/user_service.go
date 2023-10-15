@@ -92,10 +92,11 @@ func UserRegister(c *gin.Context) {
 	ret := models.CreateUser(user) // TODO: 错误处理
 	if ret.Error != nil {
 		fmt.Println(ret.Error)
-		c.JSON(200, gin.H{
+		c.JSON(400, gin.H{
 			"code":    -1,
 			"message": "注册失败",
 		})
+		return
 	}
 	c.JSON(200, gin.H{
 		"code":    0,
@@ -269,8 +270,7 @@ func AddFriend(c *gin.Context) {
 		utils.RespFail(c.Writer, "不能添加自己")
 		return
 	}
-	msg, code := models.AddFriend(userId, targetId)
-	if code == -1 {
+	if msg, code := models.AddFriend(userId, targetId); code == -1 {
 		utils.RespFail(c.Writer, msg)
 	} else {
 		utils.RespOK(c.Writer, nil, msg)
@@ -301,6 +301,17 @@ func LoadGroups(c *gin.Context) {
 	if umbList, code := models.LoadGroups(userId); code == -1 {
 		utils.RespFail(c.Writer, "加载群聊失败")
 	} else {
-		utils.RespOK(c.Writer, umbList, "加载群聊成功")
+		utils.RespOKList(c.Writer, umbList, "加载群聊成功")
+	}
+}
+
+func JoinGroup(c *gin.Context) {
+	userId := c.PostForm("userId")
+	groupId := c.PostForm("groupId")
+	//fmt.Println(userId, groupId)
+	if code, msg := models.JoinGroup(userId, groupId); code == -1 {
+		utils.RespFail(c.Writer, msg)
+	} else {
+		utils.RespOK(c.Writer, nil, msg)
 	}
 }

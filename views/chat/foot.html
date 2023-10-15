@@ -310,18 +310,24 @@
                 startrecord: function () {
 
                 },
-                //跟谁单聊
+                //聊天入口
                 sendtxtmsg: function (txt) {
                     if (this.isDisable) {
                         this.setTimeFlag()
-                        console.log("单聊")
+
                         //{id:1,userid:2,dstid:3,cmd:10,media:1,content:"hello"}
                         var msg = this.createmsgcontext();
                         msg.Media = 1;
                         msg.Content = txt;
+                        console.log(msg.Type)
+
                         if (msg.Type == 1) {
                             this.showmsg(userId(), msg); // 被我修改 原本是userInfo()
                         }
+                        // }else{
+                        //     console.log("群聊")
+                        // this.showmsg(userId(), msg);
+                        // }
 
                         this.webSocket.send(JSON.stringify(msg))
                     }
@@ -419,7 +425,7 @@
                         this.setTimeFlag()
                         this.win = "group";
                         this.title = group.Name;
-                        this.msgcontext.TargetId = parseInt(group.ID);
+                        this.msgcontext.TargetId = group.GroupIdentity;
                         this.msgcontext.Type = 2;
                     }
                 },
@@ -440,7 +446,7 @@
                 },
                 onmessage: function (data) {
                     this.loaduserinfo(data.userId, function (user) {
-                        console.log(">>>>>onmessage:")
+                        console.log(">>>>> onmessage:")
                         this.showmsg(user, data)
                         this.friends.map((item) => {
                             if (item.ID == data.userId) {
@@ -505,7 +511,8 @@
                 },
                 loadcommunitys: function () {
                     var that = this;
-                    post("contact/loadcommunity", { ownerId: userId() }, function (res) {
+                    post("group/load", { userId: userId() }, function (res) {
+                        console.log(res)
                         that.communitys = res.Rows || [];
                     })
                 },
@@ -605,10 +612,9 @@
                         this.setTimeFlag();
                         var that = this;
                         console.log(that);
-                        post("contact/joinGroup", { comId: dstobj, "userId": userId() }, function (res) {
+                        post("group/join", { "groupId": dstobj, "userId": userId() }, function (res) {
                             if (res.Code == 0) {
                                 mui.toast("添加成功");
-
                                 that.loadcommunitys();
                             } else {
                                 mui.toast(res.Msg);
